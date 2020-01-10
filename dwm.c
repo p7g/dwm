@@ -59,6 +59,12 @@
 
 #define OPAQUE                  0xffU
 
+#ifdef __GNUC__
+# define UNUSED                 __attribute__((unused))
+#else
+# define UNUSED
+#endif
+
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
@@ -206,15 +212,15 @@ static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setgaps(int oh, int ov, int ih, int iv);
-static void incrgaps(const Arg *arg);
-static void incrigaps(const Arg *arg);
-static void incrogaps(const Arg *arg);
-static void incrohgaps(const Arg *arg);
-static void incrovgaps(const Arg *arg);
-static void incrihgaps(const Arg *arg);
-static void incrivgaps(const Arg *arg);
-static void togglegaps(const Arg *arg);
-static void defaultgaps(const Arg *arg);
+static void UNUSED incrgaps(const Arg *arg);
+static void UNUSED incrigaps(const Arg *arg);
+static void UNUSED incrogaps(const Arg *arg);
+static void UNUSED incrohgaps(const Arg *arg);
+static void UNUSED incrovgaps(const Arg *arg);
+static void UNUSED incrihgaps(const Arg *arg);
+static void UNUSED incrivgaps(const Arg *arg);
+static void UNUSED togglegaps(const Arg *arg);
+static void UNUSED defaultgaps(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
@@ -224,6 +230,8 @@ static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
+static void tagtoleft(const Arg *arg);
+static void tagtoright(const Arg *arg);
 static void tile(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
@@ -243,6 +251,8 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void viewtoleft(const Arg *arg);
+static void viewtoright(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
@@ -1809,6 +1819,32 @@ tagmon(const Arg *arg)
 }
 
 void
+tagtoleft(const Arg *arg)
+{
+	if (selmon->sel != NULL
+			&& __builtin_popcount(
+				selmon->tagset[selmon->seltags] & TAGMASK) == 1
+			&& selmon->tagset[selmon->seltags] > 1) {
+		selmon->sel->tags >>= 1;
+		focus(NULL);
+		arrange(selmon);
+	}
+}
+
+void
+tagtoright(const Arg *arg)
+{
+	if (selmon->sel != NULL
+			&& __builtin_popcount(
+				selmon->tagset[selmon->seltags] & TAGMASK) == 1
+			&& selmon->tagset[selmon->seltags] & (TAGMASK >> 1)) {
+		selmon->sel->tags <<= 1;
+		focus(NULL);
+		arrange(selmon);
+	}
+}
+
+void
 tile(Monitor *m)
 {
 	unsigned int i, n, h, r, oe = enablegaps, ie = enablegaps, mw, my, ty;
@@ -2188,6 +2224,34 @@ view(const Arg *arg)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
 	focus(NULL);
 	arrange(selmon);
+}
+
+void
+viewtoleft(const Arg *arg)
+{
+	if (__builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1
+			&& selmon->tagset[selmon->seltags] > 1) {
+		selmon->seltags ^= 1; /* toggle sel tagset */
+		selmon->tagset[selmon->seltags] =
+			selmon->tagset[selmon->seltags ^ 1] >> 1;
+
+		focus(NULL);
+		arrange(selmon);
+	}
+}
+
+void
+viewtoright(const Arg *arg)
+{
+	if (__builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1
+			&& selmon->tagset[selmon->seltags] & (TAGMASK >> 1)) {
+		selmon->seltags ^= 1; /* toggle sel tagset */
+		selmon->tagset[selmon->seltags] =
+			selmon->tagset[selmon->seltags ^ 1] << 1;
+
+		focus(NULL);
+		arrange(selmon);
+	}
 }
 
 Client *
